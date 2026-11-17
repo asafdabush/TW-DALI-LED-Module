@@ -12,6 +12,8 @@ Personal hardware project, designed end to end in KiCad 9.
 
 ---
 
+Full schematic: [`docs/schematic.pdf`](docs/schematic.pdf)
+
 ## Architecture
 
 ```mermaid
@@ -34,23 +36,35 @@ The board is split into two galvanically isolated domains: the 24 V power and MC
 ## Design Blocks
 
 ### Power input
+
+<img src="docs/sch_power.png" width="420">
+
 - **Reverse-polarity protection:** SS34 Schottky in series.
 - **Overcurrent:** 1.1 A resettable PTC fuse.
 - **Transient clamp:** SMBJ26A TVS across the 24 V rail.
 - **Logic supply:** L78L33 linear regulator for the MCU only, so its dissipation stays small (≈ 20.7 V × ~10 mA ≈ 0.2 W).
 
 ### Constant-current LED channels (×2, one hierarchical sheet instantiated twice)
+
+<img src="docs/sch_led_channel.png" width="460">
+
 - **Topology:** AL8860 hysteretic buck with high-side current sensing, a 47 µH Bourns SRN6028 inductor and a PMEG4010 freewheel Schottky.
 - **Output current:** set by the sense resistor, I_LED = V_SENSE / R_S = 0.1 V / 0.15 Ω ≈ **667 mA** per channel (nominal), with P_RS ≈ 67 mW.
 - **Dimming:** the CTRL pin accepts either timer PWM directly, or an analog level from the MCU DAC through 1 kΩ. Firmware keeps whichever source is unused in high impedance. A 10 kΩ pull-down holds the LEDs off while the MCU is in reset.
 - **Decoupling:** 4.7 µF + 100 nF / 50 V at each regulator input.
 
 ### Isolated DALI physical layer
+
+<img src="docs/sch_dali.png" width="560">
+
 - **Polarity-free bus connection:** MB6S bridge rectifier, with an SMBJ24A TVS across the bus.
 - **Receive:** a BZX384-C5V1 Zener sets the detection threshold between DALI low (< 4.5 V) and high (> 9.5 V). The opto LED current is limited by a two-transistor current sink (BC847 pair, R = 680 Ω), so I ≈ V_BE / R ≈ 1 mA, inside the DALI 2 mA per-device budget. The receiver output is pulled up to 3.3 V, so the logic is inverted (bus idle-high gives RX low).
 - **Transmit:** the MCU drives the TCMT1107 LED through 330 Ω (≈ 6 mA). The opto output pulls the gate of an AO3400A to the bus through 10 kΩ, and the MOSFET shorts the rectified bus to signal a logic low. A 10 V Zener clamps V_GS, and 100 kΩ keeps the gate off by default.
 
 ### Microcontroller
+
+<img src="docs/sch_mcu.png" width="520">
+
 | Function | STM32G071KB pin |
 |---|---|
 | DALI RX / TX | PA0 / PA1 |
@@ -69,6 +83,7 @@ The board is split into two galvanically isolated domains: the 24 V power and MC
 
 | Path | Contents |
 |---|---|
+| [`docs/schematic.pdf`](docs/schematic.pdf) | Full schematic, 6 sheets |
 | [`hardware/`](hardware) | KiCad 9 project: root sheet plus `power`, `led_channel` (×2), `mcu` and `dali` sub-sheets, and the PCB |
 | [`docs/BOM.csv`](docs/BOM.csv) | Bill of materials (47 parts, 31 lines) |
 | [`docs/pcb_top.png`](docs/pcb_top.png) | Layout render |
@@ -79,7 +94,7 @@ Open `hardware/TW_DALI_Module.kicad_pro` in KiCad 9 or later.
 
 - [ ] Fabricate and assemble the first batch
 - [ ] Bring-up: verify 3.3 V rail, set-current accuracy, buck ripple and switching frequency at 24 V
-- [ ] DALI PHY: verify RX threshold and TX timing (1200 bit/s Manchester) with a DALI master
+- [ ] DALI PHY: verify the RX threshold and the TX timing (1200 bit/s Manchester) with a DALI master. The estimated bus-side threshold (Zener + opto LED + V_BE + bridge drops) is ≈ 8.5–9 V, so the margin to the 9.5 V high level needs to be measured
 - [ ] Firmware: IEC 62386-102 control gear plus DT8 colour-temperature commands
 - [ ] Thermal measurement at full load on both channels
 
